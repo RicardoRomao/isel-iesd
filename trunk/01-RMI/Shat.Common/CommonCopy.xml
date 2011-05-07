@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Shat.CopyClasses" default="CopyClasses" basedir=".">
+	<target name="CopyClasses">
+		<copy includeemptydirs="false" todir="../www/classes">
+			<fileset dir="bin"/>
+		</copy>
+	</target>
+</project>
