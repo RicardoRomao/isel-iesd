@@ -19,12 +19,9 @@ public class Mailbox extends UnicastRemoteObject implements IMailbox {
 	private List<IMailBoxListener> _listeners;
 
 	public Mailbox(String name, String language) throws RemoteException {
-		this(name);
-		this._language = language;
-	}
-	protected Mailbox(String name) throws RemoteException {
 		super();
 		_name = name;
+		_language = language;
 	}
 
 	@Override
@@ -48,29 +45,29 @@ public class Mailbox extends UnicastRemoteObject implements IMailbox {
 			_listeners.add(listener);
 		}
 	}
-	@Override
-	public boolean HasTranslator(String langFrom, String langTo) throws RemoteException {
-		return true;
-	}
-	@Override
-	public ITranslator GetTranslator(String langFrom, String langTo) throws RemoteException {
-		if (!_language.equals(langFrom)) { // Only if this mailbox speaks the source language
-			return null;
-		}
-		return new ITranslator() {
 
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public String Translate(String text, String from, String to) {
-				Translate.setHttpReferrer("www.isel.pt");
-				try {
-					return Translate.execute("*" + text, Language.fromString(from), Language.fromString(to));
-				} catch (Exception e) {
-					e.printStackTrace();
-					return "Something went wrong...";
+	@Override
+	public ITranslator GetTranslator(final String langFrom) throws RemoteException {
+		if (_language.equals(langFrom)) { // Only if this mailbox speaks the source language
+			return new ITranslator() {
+	
+				private static final long serialVersionUID = 1L;
+	
+				@Override
+				public String Translate(String text, String from, String to) {
+					Translate.setHttpReferrer("www.isel.pt");
+					try {
+						return Translate.execute("*" + text, Language.fromString(from), Language.fromString(to));
+					} catch (Exception e) {
+						e.printStackTrace();
+						return "Something went wrong...";
+					}
 				}
-			}
-		};
+				
+				@Override
+				public String SourceLang() { return langFrom; }
+			};
+		}
+		return null;
 	}
 }

@@ -13,7 +13,6 @@ import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.List;
 
 import javax.swing.BoxLayout;
 import javax.swing.JApplet;
@@ -22,6 +21,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.JLabel;
 
 public class ShatAppletClient extends JApplet implements IMailBoxListener {
 	private static final long serialVersionUID = 1L;
@@ -31,25 +31,30 @@ public class ShatAppletClient extends JApplet implements IMailBoxListener {
 	private JTextField jTextField = null;
 	private JButton jButton = null;
 	private static final String host = "localhost"; // @jve:decl-index=0:
+	private String userName;
+	private String userLang;
 	private IMessageService stub; // @jve:decl-index=0:
 	private IMailbox mb;  //  @jve:decl-index=0:
 	private ITranslator translator;
+	private JLabel lblLanguage = null;
 
 	public ShatAppletClient() {
 		super();
-	}j
+	}
 
 	public void init() {
-		this.setSize(300, 200);
-		this.setLocation(100, 100);
+		this.setSize(400, 200);
 		this.setContentPane(getJContentPane());
+		userName = getParameter("Name");
+		userLang = getParameter("Language");
+		lblLanguage.setText(userName + " | " + userLang);
 		if (System.getSecurityManager() == null) {
 			System.setSecurityManager(new RMISecurityManager());
 		}
 		try {
 			Registry registry = LocateRegistry.getRegistry(host);
 			stub = (IMessageService) registry.lookup("MessageService");
-			mb = new Mailbox(getParameter("Name"), getParameter("Language"));
+			mb = new Mailbox(userName, userLang);
 			mb.AddListener(this);
 			stub.RegisterMailbox(mb);
 		} catch (Exception e) {
@@ -97,11 +102,15 @@ public class ShatAppletClient extends JApplet implements IMailBoxListener {
 	 */
 	private JPanel getJPanel() {
 		if (jPanel == null) {
+			lblLanguage = new JLabel();
+			FlowLayout flowLayout = new FlowLayout();
+			flowLayout.setAlignment(java.awt.FlowLayout.LEFT);
 			jPanel = new JPanel();
-			jPanel.setLayout(new FlowLayout());
+			jPanel.setLayout(flowLayout);
 			jPanel.setPreferredSize(new Dimension(1, 30));
 			jPanel.add(getJTextField(), null);
 			jPanel.add(getJButton(), null);
+			jPanel.add(lblLanguage, null);
 		}
 		return jPanel;
 	}
@@ -134,8 +143,8 @@ public class ShatAppletClient extends JApplet implements IMailBoxListener {
 				@Override
 				public void actionPerformed(ActionEvent evt) {
 					try {
-						String msg = jTextField.getText();
-						stub.MulticastMessage(msg, mb.GetLanguage());
+						stub.MulticastMessage(jTextField.getText(), mb);
+						jTextField.setText("");
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
@@ -147,41 +156,35 @@ public class ShatAppletClient extends JApplet implements IMailBoxListener {
 
 	@Override
 	public void YouGotMail(String message, String langFrom) {
-		try {
-			if (langFrom.equals(mb.GetLanguage())) {
-				ShowMessage(message);
-				return;
-			}
-		} catch (RemoteException e1) {
-			ShowMessage("Could not access local mailbox!");
+		if (langFrom.equals(userLang)) {
+			ShowMessage(message);
+			return;
 		}
-		if (translator == null) {
+		if (translator != null && langFrom.equals(translator.SourceLang())) {
+			try {
+				ShowMessage(translator.Translate(message, langFrom, mb.GetLanguage()));
+			} catch (Exception e) {
+				ShowMessage("Couldn't access translator!");
+				e.printStackTrace();
+			}
+		} else {
 			try {
 				translator = stub.GetTranslator(langFrom, mb.GetLanguage());
 				if (translator == null) {
-					List<IMailbox> clients = stub.GetClientsWithTranslator(langFrom, mb.GetLanguage());
-					translator = clients.size() > 0 ? 
-							clients.get(0).GetTranslator(langFrom, mb.GetLanguage()) : null;
-				}
-				if (translator == null) {
-					throw new IllegalStateException();
+					// Try to get from other clients
+					translator = stub.GetTranslatorFromClient(langFrom);
+					if (translator == null) {
+						ShowMessage("<#no_trans> " + message);
+						return;
+					}
 				}
 			} catch (RemoteException e) {
-				ShowMessage("No translator available after asking server!");
+				ShowMessage("Couldn't get any translator!");
 				e.printStackTrace();
-				return;
-			} catch (IllegalStateException ie) {
-				ShowMessage("No translator available after asking all known clients!");
-				ie.printStackTrace();
 				return;
 			}
 		}
-		try {
-			ShowMessage(translator.Translate(message, langFrom, mb.GetLanguage()));
-		} catch (Exception e) {
-			ShowMessage("Error comunicating with translator!");
-			e.printStackTrace();
-		}
+		
 	}
 	
 	private void ShowMessage(final String message) {
@@ -197,4 +200,4 @@ public class ShatAppletClient extends JApplet implements IMailBoxListener {
 		jTextArea.append(message);
 	}
 
-}
+}  //  @jve:decl-index=0:visual-constraint="10,10"
