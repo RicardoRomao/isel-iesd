@@ -1,5 +1,6 @@
 package iesd.rmi.shat.client;
 
+import iesd.rmi.shat.common.IMailBoxListener;
 import iesd.rmi.shat.common.IMailbox;
 import iesd.rmi.shat.common.IMessageService;
 
@@ -8,7 +9,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Scanner;
 
-public class ShatClient {
+public class ShatClient{
 	private static final String host = "localhost";
 
 	public static void main(String[] args) {
@@ -22,6 +23,14 @@ public class ShatClient {
 			IMessageService stub = (IMessageService)registry.lookup("MessageService");
 
 			IMailbox mb = new Mailbox(System.getenv("Name"), System.getenv("Language"));
+			mb.AddListener(new IMailBoxListener() {
+				
+				@Override
+				public void YouGotMail(String message, String langFrom) {
+					System.out.println("[" + langFrom + "]" + message);
+				}
+			});
+			
 			stub.RegisterMailbox(mb);
 
 			System.out.println("::.. Aplicação CHAT cliente ..::");
@@ -30,7 +39,7 @@ public class ShatClient {
 			Scanner input = new Scanner(System.in);
 			while (!(msg = input.nextLine()).equalsIgnoreCase("quit")) {
 				try {
-					stub.MulticastMessage(msg, mb.GetLanguage());
+					stub.MulticastMessage(msg, mb);
 				} catch (Exception e) {
 					System.out.println("Server unavailable.");
 				}
