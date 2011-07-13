@@ -1,0 +1,4 @@
+http://www.dancres.org/blitzblog/2006/02/20/javaspaces-and-jms/
+http://www.jini.org/wiki/JavaSpaces_vs._JMS
+http://www.nyu.edu/classes/jcf/g22.3033-007_sp01/handouts/g22_3033_h87.htm
+http://www.dancres.org/cottage/javaspaces.html
